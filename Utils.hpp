@@ -1,10 +1,10 @@
 #ifndef UTILS
 #define UTILS
 #define LOWER_PRICE 1
-#define UPPER_PRICE 10
+#define UPPER_PRICE 100
 #define LOWER_QUANT 1
-#define UPPER_QUANT 10
-#define HASH_SIZE 107
+#define UPPER_QUANT 100
+#define HASH_SIZE 100007
 #include <random>
 #include <chrono>
 
