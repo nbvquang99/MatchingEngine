@@ -18,6 +18,9 @@
 
 using namespace std;
 
+HashTable* buyBook = createTable(HASH_SIZE);
+HashTable* sellBook = createTable(HASH_SIZE);
+
 void error(const char *msg)
 {
     perror(msg);
@@ -26,18 +29,22 @@ void error(const char *msg)
 
 // try to find a matching order in hashTable1 for newOrder
 // if newOrder is not totally resolve then push it in hashTable2
-bool matching(Order *newOrder, HashTable* hashTable1, HashTable* hashTable2, bool loggingToken) {
+bool matching(Order *newOrder, HashTable* hashTable1, HashTable* hashTable2, bool loggingToken, bool ssToken, std::stringstream& ss) {
     unsigned long key = hashFunction(hashTable1, newOrder->price);
     Order* it = hashTable1->head[key];
-    if (loggingToken) std::cout << "OrderId " << newOrder->orderId << " - Price " << newOrder->price << " - Quantity " << newOrder->quantity << ":\n";
+    if (loggingToken) std::cout << (newOrder->isBuy ? "Buy " : "Sell ") << "OrderId " << newOrder->orderId << " - Price " << newOrder->price << " - Quantity " << newOrder->quantity << ":\n";
+    if (ssToken) ss << (newOrder->isBuy ? "Buy " : "Sell ") << "OrderId " << newOrder->orderId << " - Price " << newOrder->price << " - Quantity " << newOrder->quantity << ":\n";
+    
     while (it != nullptr) {      
         if (it->price == newOrder->price) {
             int cross = newOrder->quantity - it->quantity;
-            if (loggingToken) std::cout << "\t" << "OrderId " << it->orderId << " - Price " << it->price << " - Quantity " << it->quantity << "\n";
+            if (loggingToken) std::cout << (it->isBuy ? "Buy " : "Sell ") << "\t" << "OrderId " << it->orderId << " - Price " << it->price << " - Quantity " << it->quantity << "\n";
+            if (ssToken) ss << "\t" << (it->isBuy ? "Buy " : "Sell ") << "OrderId " << it->orderId << " - Price " << it->price << " - Quantity " << it->quantity << "\n";
             if (cross < 0) {
                 it->quantity -= newOrder->quantity;
                 newOrder->quantity = 0;
-                if (loggingToken) std::cout << "\t" << "totally matched." << std::endl;
+                if (loggingToken) std::cout << "\t" << (it->isBuy ? "Buy " : "Sell ") << "totally matched." << std::endl;
+                if (ssToken) ss << "\t" << (it->isBuy ? "Buy " : "Sell ") << "totally matched." << std::endl;
                 return true;
             } else if (cross > 0) {
                 newOrder->quantity = cross;
@@ -46,6 +53,7 @@ bool matching(Order *newOrder, HashTable* hashTable1, HashTable* hashTable2, boo
                 newOrder->quantity = 0;
                 it = removeHead(hashTable1, newOrder);
                 if (loggingToken) std::cout << "\t" << "totally matched." << std::endl;
+                if (ssToken) ss << "\t" << "totally matched." << std::endl;
                 return true;
             }
         } else {
@@ -54,10 +62,11 @@ bool matching(Order *newOrder, HashTable* hashTable1, HashTable* hashTable2, boo
     }
     insertHashTable(hashTable2, newOrder);
     if (loggingToken) std::cout << "\t" << "partial (or not yet) matched." << std::endl;
+    if (ssToken) ss << "\t" << "partial (or not yet) matched." << std::endl;
     return false;
 }
 
-void processMatching(int sock, int totalLength, bool loggingToken) {
+void processMatching(int sock, int totalLength, bool loggingToken,  std::stringstream& ss) {
     char* buffer = new char[totalLength];
     int readSize = 1000;
     int byteRead = 0;
@@ -69,8 +78,6 @@ void processMatching(int sock, int totalLength, bool loggingToken) {
     printf("Read finished: %d (bytes).\n", byteRead);
 
     // matching
-    HashTable* buyBook = createTable(HASH_SIZE);
-    HashTable* sellBook = createTable(HASH_SIZE);
     int count=0, number=0;
     int numArr[4];
     // std::cout << buffer;
@@ -92,9 +99,9 @@ void processMatching(int sock, int totalLength, bool loggingToken) {
                 order->nextOrder = nullptr;
                 order->prevOrder = nullptr;
                 if (order->isBuy) {
-                    matching(order, sellBook, buyBook, loggingToken);
+                    matching(order, sellBook, buyBook, loggingToken, false, ss);
                 } else {
-                    matching(order, buyBook, sellBook, loggingToken);
+                    matching(order, buyBook, sellBook, loggingToken, false, ss);
                 }
             }
         }
@@ -143,6 +150,8 @@ int main(int argc, char *argv[])
 
     // The accept() call actually accepts an incoming connection
     clientLen = sizeof(clientAddress);
+    int startingId = 2000000;
+    std::stringstream ss;
     while (true) {
         servingSockFd = accept(welcomeSockFd, (struct sockaddr *) &clientAddress, &clientLen);
         if (servingSockFd < 0) {
@@ -154,15 +163,42 @@ int main(int argc, char *argv[])
 
             // read the totalLength first
             read(servingSockFd, totalLength, 8);
-            int bufferLength = stoi(totalLength);
-            printf("Reading %d (bytes) from the client and matching...\n", bufferLength);
 
-            // read the orders
-            processMatching(servingSockFd, bufferLength, loggingToken);
-            auto stop = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-            printf("Time taken by receiving, parsing orders and matching them: %lld (ms).\n", duration.count());
-            printf("-----------------------\n");
+            // process customClient
+            if (totalLength[0] == 'C') {
+                char buffer[11];
+                read(servingSockFd, buffer, 10);
+                int ordType, price, quantity;
+                sscanf(buffer, "%d%d%d", &ordType, &price, &quantity);
+                Order* order = new Order();
+                order->orderId = ++startingId;
+                order->isBuy = ordType;
+                order->price = price;
+                order->quantity = quantity;
+                order->nextOrder = nullptr;
+                order->prevOrder = nullptr;
+                ss.str(std::string());
+                if (order->isBuy) {
+                    matching(order, sellBook, buyBook, true, true, ss);
+                } else {
+                    matching(order, buyBook, sellBook, true, true, ss);
+                }
+                string response = ss.str();
+                string responseLen = to_string(response.size());
+                while (responseLen.size() < 8) responseLen+=" ";
+                write(servingSockFd, responseLen.c_str(), 8);
+                write(servingSockFd, response.c_str(), response.size());
+            } else { // process client
+                int bufferLength = stoi(totalLength);
+                printf("Reading %d (bytes) from the client and matching...\n", bufferLength);
+
+                // read the orders
+                processMatching(servingSockFd, bufferLength, loggingToken, ss);
+                auto stop = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+                printf("Time taken by receiving, parsing orders and matching them: %lld (ms).\n", duration.count());
+                printf("-----------------------\n");
+            }
             close(servingSockFd);
         }
     }
