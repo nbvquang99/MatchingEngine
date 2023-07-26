@@ -122,7 +122,7 @@ To run:
               totally matched.
     ```
 # V. Note
-- The correctness: 
+- The correctness: manually tested with clientCustom.
 - Reference: 
   - [Socket Programming](https://www.bogotobogo.com/cplusplus/sockets_server_client.php)
 - This repository is implemented from scratch by Nguyen Ba Vinh Quang.
