@@ -1,106 +1,129 @@
 ## Table of contents
 
 - [I. Description](#i-description)
-- [II. App Description](#ii-app-description)
-  - [1. The story](#1-the-story)
-  - [2. The app features](#2-the-app-features)
-    - [*Account system*](#account-system)
-    - [*Schedule \& meeting management*](#schedule--meeting-management)
-    - [*Group management*](#group-management)
-    - [*Place suggestion*](#place-suggestion)
-- [III. Code Description](#iii-code-description)
-  - [1. Techstack](#1-techstack)
-  - [2. Class Structure](#2-class-structure)
-    - [**User**](#user)
-    - [**Group**](#group)
-    - [**Meeting**](#meeting)
-    - [**Place**](#place)
-    - [**Map API**](#map-api)
-  - [3. Sequence of interaction](#3-sequence-of-interaction)
-- [IV. Challenges](#iv-challenges)
-- [V. Acknowledge](#v-acknowledge)
+- [II. Compile and run](#ii-compile-and-run)
+  - [1. Server](#1-server)
+  - [2. Client](#2-client)
+  - [3. Custom client](#3-custom-client)
+- [III. Code \& Idea Description](#iii-code--idea-description)
+    - [**Uitls.hpp**](#uitlshpp)
+    - [**Order.hpp**](#orderhpp)
+    - [**HashTable.hpp**](#hashtablehpp)
+    - [**client.cpp**](#clientcpp)
+    - [**clientCustom.cpp**](#clientcustomcpp)
+    - [**server.cpp**](#servercpp)
+- [V. Note](#v-note)
 ---
 # I. Description
+- A simple matching engine, accepting new sell/buy orders and match them with a good performance.
+- Support up to 2 million order.
+- Not support limit order, only match exactly price.
 
-1. **Group 2**: 
-   - 20190710 Nguyen Ba Vinh Quang / nbvquang99@kaist.ac.kr
-   - 20200510 이지윤 (Nicole Lee) / nicolelee2001@kaist.ac.kr
-   - 20200773 이수연 (Suyoun Lee) / jenslee705@kaist.ac.kr
-2. **GIT URL**: [https://github.com/babycroc/id311-lets-meek](https://github.com/babycroc/id311-lets-meek)
-3. **Deploy Link**: [https://id311-lets-meek.vercel.app/](https://id311-lets-meek.vercel.app/)
-4. **Youtube Demo Video**: [Click here](https://youtu.be/VYxQf9JLeqs)
+# II. Compile and run
+## 1. Server
+Compile with
+```
+  g++ -o server server.cpp
+```
+To run: `portNumber` is any port number available on your machine, `isLog` is 0 or 1, to config the server to logging the process of matching
+```
+  ./server portNumber isLog
+```
 
-# II. App Description
-<p align="center">
-  <img src="static/logo.png" alt="Logo">
-</p>
+## 2. Client
+Compile with
+```
+  g++ -o client client.cpp
+```
+To run: 
+  - `hostname` is the hostname of the server, I test on local machine so hostname = localhost.
+  - `portNumber` is any port number available on your machine.
+  - `buyNumber` is the number of buy orders that client will generate and send to the server. It could be up to 1000000.
+  - `sellNumber` is the number of sell orders that client will generate and send to the server. It could be up to 1000000.
+```
+  ./client localhost portNumber buyNumber sellNumber
+```
 
-## 1. The story
-This app focuses on KAIST students. It helps to manage the weekly class schedule and also group meetings since every KAIST student would join multiple groups each semester.
+## 3. Custom client
+Compile with
+```
+  g++ -o clientCustom clientCustom.cpp
+```
+To run: 
+  - `hostname` is the hostname of the server, I test on local machine so hostname = localhost.
+  - `portNumber` is any port number available on your machine.
+  - `orderType` is 1 or 0 respect to buy or sell.
+  - `orderPrice` the price value of the order.
+  - `orderQuantity` is the quantity of the order.
+```
+  ./clientCustom hostname portNumber orderType orderPrice orderQuantity
+```
 
-## 2. The app features
-*In this section, briefly describe application features (for more details and visualization, please refer to [Demo Video](https://youtu.be/VYxQf9JLeqs)).*
-### *Account system*
-- User can `create account` with email and `login` to use the function of the app.
-### *Schedule & meeting management*
-- User can add class schedule to the app with the location information, such as `10am-12pm, N25 building`.
-- User can also create meeting in the empty timeframes which is not occured by class sessions.
-- When the meeting time is passed, the app will automatically delete the meeting from user's schedule.
-- Each meeting belongs to one group and it would be showed in the meeting list with the color matching with the color of the group.
+# III. Code & Idea Description
+### **Uitls.hpp**
+- Include some support functions.
+### **Order.hpp**
+- Define Order struct, each order object is also a node in linked-list itself.
+- Include the function to convert an Order to string.
+- Include the function to generate sell/buy orders.
+### **HashTable.hpp**
+- Define the hash table to store the sell order book and buy order book.
+- Hash function base on the price value of order.
+- Support methods: create a new hash table, insert, delete the head of a bucket, get the current number of items in the hash table.
+### **client.cpp**
+- Generate sell/buy orders to send to the server, making the database for the server.
+- Generating time for 2 million orders is around 17s on MacBook Pro 2019, 16GB, Core i7 2.6GHz x 6.
+- Sending time for 2 million orders is around 77ms.
+```
+  ./client localhost 1304 1000000 1000000
 
-### *Group management*
-- `A group` include multiple users. User scan create many groups as they want to.
-- Users can also join a group by the invitation code. Each group will have a fixed invitation code.
-- From the group list page, user can create new meeting for a specific group.
+  Generated 2000000 orders.
+  Time taken by generating 30569040 (bytes) of the buffer: 17246 (ms)
+  Connected to server.
+  Start to send orders.
+  Time taken by sending 30569040 (bytes) of the buffer: 77 (ms)
+```
+### **clientCustom.cpp**
+- Sending an order to the server with order type, price, and quantity are defined by user.
+- OrderID and matching result are generated and returned by the server.
+```
+  ./clientCustom localhost 1304 1 100 1
 
-### *Place suggestion*
-- The app bases on the location that users input to schedule and location of other meetings to suggest a place for a new meeting so that the total travel time for every members in the group is minimized.
-- Place also is separated into 3 types of environment sound: `loud, quite, and moderate`.
-
-# III. Code Description
-## 1. Techstack
-<p align="center">
-  <img src="static/stack.png" alt="Logo">
-</p>
-
-## 2. Class Structure
-### **User**
-User class represents for User document on firebase database. When user login, an User object is returned.
-### **Group**
-Group class represents for Group document on firebase database. When user create a new group, a Group object is created. When user join a group, the user id is pushed into the group object.
-### **Meeting**
-Meeting class represents for Meeting document on firebase database. When user create a new meeting for the current group, a Meeting object is created. Then the Meeting object will be linked with the current group and every users in that group.
-### **Place**
-Place class represents for Place document on firebase database. Theses places were added manually by our team in order to give the suggestion for meeting place.
-### **Map API**
-This is not a class, it is a collection of functions that utilize the Google Map API and Kakao map API to compute travel time, distance, get location... in order to give the suggestion places.
-## 3. Sequence of interaction
-<p align="center"><img src="static/Slide 16_9 - 7.png" width=100% height=100% alt></p>
-<p align="center"><img src="static/Slide 16_9 - 12.png" width=100% height=100% alt></p>
-<p align="center"><img src="static/Slide 16_9 - 13.png" width=100% height=100% alt></p>
-<p align="center"><img src="static/Slide 16_9 - 16.png" width=100% height=100% alt></p>
-<p align="center"><img src="static/Slide 16_9 - 15.png" width=100% height=100% alt></p>
-
-# IV. Challenges
-1. Learning Curve: Familiarizing ourself with SvelteKit, daisyUI, Firebase Authentication, Firestore, and the map APIs may take some time and effort.
-
-2. Integration: Integrating multiple technologies can be challenging, especially when they have different APIs and conventions. Ensuring smooth integration between SvelteKit, daisyUI, Firebase Authentication, Firestore, and the map APIs requires careful attention to documentation and best practices. Moreover, althought the backend API is documented with JSdoc, it is still difficult to integrate between Backend and Frontend, a lot of bugs occured, and requiring multiple meetings and parallel programming session to resolve.
-
-3. Authentication and Authorization: Implementing user authentication and authorization using Firebase Authentication is not complex, but when combined with other services like Firestore. We face challenges in setting up managing user sessions, and storing user data into database.
-
-4. Real-time Updates: Firestore offers real-time updates, allowing us to listen for changes in the database. However, incorporating real-time updates into our SvelteKit application require understanding the structure of the backend code.
-
-5. Map API Integration: Integrating the Google Map API or Kakao Map API does pose challenges, such as obtaining API keys, setting up proper authentication and authorization, and ensuring smooth interactions between the maps and your application's data. The API quotas is also a problem.
-
-6. Debugging and Troubleshooting: As with any software development project, debugging and troubleshooting is very time-consuming and challenging. Dealing with issues related to data flow, API integrations, or promises and async functions require careful investigation and problem-solving skills.
-
-# V. Acknowledge
+  Connected to server.
+  Buy OrderId 2000002 - Price 100 - Quantity 1:
+          Sell OrderId 2000001 - Price 100 - Quantity 1
+          totally matched.
+```
+### **server.cpp**
+- Matching algorithm bases on FIFO.
+- Maintaining 2 hash tables: sellBook and buyBook to store sell orders and buy orders respectively.
+- Incoming buy orders will be matched with sell orders in sellBook, it will traverse the linked-list in the hash bucket to update the quantity.
+- When the quantity of an order reach 0, it will be deleted from the order book and response as totally matched.
+- Listenning from 2 kinds of client.
+  - client
+    - server will read all the bytes send from client, parsing them to Order objects and save into sell order book, buy order book.
+    - processing time 2 million order is around 486ms.
+    - during the process, the totally matched or partially matched items would be also deleted from the order books.
+    - the server can also print the log by set the `isLog=1` when running the server.
+    ```
+      Server: got connection from 127.0.0.1 port 49818
+      Reading 30569040 (bytes) from the client and matching...
+      Read finished: 30569040 (bytes).
+      Matching finished
+      Time taken by receiving, parsing orders and matching them: 486 (ms).
+    ```
+  - clientCustom
+    - when the server receive a new order from this client custom, it will try to find a matched order for it and then return the result.
+    - the result can be totally matched, partially matched or not matched.
+    ```
+      Server: got connection from 127.0.0.1 port 49746
+      OrderId 2000002 - Price 100 - Quantity 1:
+              OrderId 2000001 - Price 100 - Quantity 1
+              totally matched.
+    ```
+# V. Note
+- The correctness: 
 - Reference: 
-  - [Google Map API document](https://developers.google.com/maps/documentation/javascript/markers)
-  - [Kakao Map Rest API document](https://developers.kakaomobility.com/docs/navi-api/origins/)
-  - [Firebase document](https://firebase.google.com/docs/firestore/query-data/get-data#get_all_documents_in_a_collection)
-  - [DaisyUI document](https://daisyui.com/theme-generator/)
-  - [Tailwind document](https://tailwindcss.com/docs/installation)
-- This project is implemented from scratch by three members of [Group 2](#i-id311-team-project-submission-form).
+  - [Socket Programming](https://www.bogotobogo.com/cplusplus/sockets_server_client.php)
+- This repository is implemented from scratch by Nguyen Ba Vinh Quang.
 
-https://www.bogotobogo.com/cplusplus/sockets_server_client.php
