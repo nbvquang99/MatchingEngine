@@ -122,7 +122,25 @@ To run:
               totally matched.
     ```
 # V. Note
-- The correctness: manually tested with clientCustom.
+- The correctness: manually tested with clientCustom. For example:
+  ```
+  ./clientCustom localhost 1304 0 100 1
+  Connected to server.
+  Sell OrderId 2000001 - Price 100 - Quantity 1:
+          partial (or not yet) matched.
+
+  ./clientCustom localhost 1304 1 100 2
+  Connected to server.
+  Buy OrderId 2000002 - Price 100 - Quantity 2:
+          Sell OrderId 2000001 - Price 100 - Quantity 1
+          partial (or not yet) matched.
+                                                              
+  ./clientCustom localhost 1304 0 100 1
+  Connected to server.
+  Sell OrderId 2000003 - Price 100 - Quantity 1:
+          Buy OrderId 2000002 - Price 100 - Quantity 1
+          totally matched.
+  ```
 - Reference: 
   - [Socket Programming](https://www.bogotobogo.com/cplusplus/sockets_server_client.php)
 - This repository is implemented from scratch by Nguyen Ba Vinh Quang.
