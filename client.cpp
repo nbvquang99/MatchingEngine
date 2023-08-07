@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -55,6 +56,12 @@ int main(int argc, char *argv[])
     int nBuy = atoi(argv[3]);
     int nSell = atoi(argv[4]);
     std::string orderBuffer = generateBuffer(nBuy, nSell);
+
+    // write buffer to a file
+    std::ofstream out("orders.txt");
+    out << orderBuffer;
+    out.close();
+
     orderBuffer+="\n";
 
     // sending throught socket
